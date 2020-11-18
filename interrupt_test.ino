@@ -7,44 +7,69 @@
 
 #include "motor.h"
 
-#include "ros.h"
-#include <std_msgs/Float64.h>
-
-//ros node handler
-ros::NodeHandle  nh;
+//#define SHOW
 
 void fr_A();
-void fr_B();
-void set(const std_msgs::Float64&);
+void fl_A();
+void br_A();
+void bl_A();
 
-ros::Subscriber<std_msgs::Float64> sub("pwm", set);
-Motor mot_fr;
+Motor mot_fr, mot_fl, mot_br, mot_bl;
 
 void setup() {
   Serial.begin(9600);
+  Serial.setTimeout(0.0001);
 
-  mot_fr = Motor(6, 7, 8, 0, 1, fr_A, fr_B);
-  
-  nh.initNode();
-  nh.subscribe(sub);
+  mot_fr = Motor(3, 1, 2, 5, A0, fr_A, 0.0);
+  mot_fl = Motor(6, 5, 4, 6, A1, fl_A, 0.0);
+  mot_br = Motor(9, 8, 7, 7, A2, br_A, 0.0);
+  mot_bl = Motor(10, 12, 11, 8, A3, bl_A, 0.0);
 }
 
 void loop() {
+
+  if (Serial.available())
+    if (Serial.find("a"))
+      mot_fr.setSpeed(Serial.parseInt());
+    if (Serial.find("b"))
+      mot_fl.setSpeed(Serial.parseInt());
+    if (Serial.find("c"))
+      mot_br.setSpeed(Serial.parseInt());
+    if (Serial.find("d"))
+      mot_bl.setSpeed(Serial.parseInt());
+
+  //motor control and encoder calculation
   mot_fr.update();
-  nh.spinOnce();
-  delay(100);
+  mot_fl.update();
+  mot_br.update();
+  mot_bl.update();
+
+#ifdef SHOW
+  Serial.print("A : ");
+  Serial.print(mot_fr.enc.rpm);
+  Serial.print("\tB : ");
+  Serial.print(mot_fl.enc.rpm);
+  Serial.print("\tC : ");
+  Serial.print(mot_br.enc.rpm);
+  Serial.print("\tD : ");
+  Serial.println(mot_bl.enc.rpm);
+#endif
+
+  delay(20);
 }
 
 void fr_A() {
-  change(mot_fr.enc, 0);
+  change(mot_fr.enc);
 }
 
-void fr_B() {
-  change(mot_fr.enc, 1);
+void fl_A() {
+  change(mot_fl.enc);
 }
 
+void br_A() {
+  change(mot_br.enc);
+}
 
-void set(const std_msgs::Float64& msg)
-{
-  mot_fr.setSpeed(msg.data);
+void bl_A() {
+  change(mot_bl.enc);
 }

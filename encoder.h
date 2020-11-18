@@ -6,7 +6,7 @@ const int PINMAP[] = {2, 3, 4, 7, 8, 42, 45, 72, 75};
 class Encoder
 {
     int
-    ext_pin[2],
+    ext_pin,
             arduino_pin[2];
 
     unsigned long last_tick = 0;
@@ -15,24 +15,22 @@ class Encoder
 
   public:
     long count = 0;
-    float rpm=0;
+    float angv=0;
 
     Encoder() {}
 
-    Encoder(int ext_a, int ext_b, void (*A)(), void (*B)())
+    Encoder(int ext, int analog, void (*A)())
     {
-      ext_pin[0] = ext_a;
-      arduino_pin[0] = PINMAP[ext_pin[0]];
+      ext_pin = ext;
+      arduino_pin[0] = PINMAP[ext_pin];
+      
+      arduino_pin[1] = analog;
 
-      ext_pin[1] = ext_b;
-      arduino_pin[1] = PINMAP[ext_pin[1]];
-
-
+//set pin mode
       pinMode(arduino_pin[0], INPUT_PULLUP);
-      attachInterrupt(ext_pin[0], A, CHANGE);
+      attachInterrupt(ext_pin, A, CHANGE);
 
-      pinMode(arduino_pin[1], INPUT_PULLUP);
-      attachInterrupt(ext_pin[1], B, CHANGE);
+      pinMode(arduino_pin[1], INPUT);
     }
 
     bool state()
@@ -40,30 +38,24 @@ class Encoder
       return digitalRead(arduino_pin[0]) == digitalRead(arduino_pin[1]);
     }
 
-    float update(float target)
+    float update()
     {
-      float duration = (millis() - last_tick) / 1000.0;
-      float dif = (count - last_count) / 720.0;
+      float duration = (millis() - last_tick)/1000.0;
+      float da = count/180.0*3.14159;
 
       last_tick = millis();
-      count = 0; //experimental
-      //last_count = count;
+      count = 0;
 
-      rpm = dif / duration * 60.0;
-
-      return (target - rpm)/duration;
+      angv = da / duration * 60.0;
+      
+      return duration;
     }
 };
 
-void change(Encoder &enc, int channel)
+void change(Encoder &enc)
 {
   bool state = enc.state();
-  if (channel == 0)
-    if (state)
-      enc.count++;
-    else
-      enc.count--;
-  else if (!state)
+  if (state)
     enc.count++;
   else
     enc.count--;
